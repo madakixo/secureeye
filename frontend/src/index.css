@@ -1,3 +1,24 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-metallic-gray-100 text-dark-black;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-bold text-dark-black;
+  }
+}
+
+.glass-card {
+  @apply bg-white/70 backdrop-blur-md border border-white/20 shadow-xl rounded-2xl;
+}
+
+.btn-metallic {
+  @apply bg-gradient-to-b from-metallic-gray-200 to-metallic-gray-300 border border-metallic-gray-400 text-dark-black font-semibold py-2 px-4 rounded-lg shadow hover:from-metallic-gray-300 hover:to-metallic-gray-400 transition-all;
+}
+
+.btn-primary {
+  @apply bg-dark-black text-white py-2 px-4 rounded-lg font-semibold hover:bg-zinc-800 transition-all;
+}

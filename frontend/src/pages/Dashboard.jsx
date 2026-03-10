@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Camera, Plus, ShieldAlert, X, Lock } from 'lucide-react';
+import { Camera, Plus, ShieldAlert, X, Lock, Settings, LayoutGrid, MonitorPlay } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import CameraGrid from '../components/CameraGrid';
 
 const Dashboard = () => {
   const [cameras, setCameras] = useState([]);
   const [detections, setDetections] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newCamera, setNewCamera] = useState({ name: '', stream_url: '' });
-  const [isPaid, setIsPaid] = useState(false);
+  const [user, setUser] = useState({ is_paid: false, name: '' });
 
   useEffect(() => {
     fetchData();
@@ -24,11 +25,11 @@ const Dashboard = () => {
       const [camRes, detRes, userRes] = await Promise.all([
         axios.get('/api/cameras', { headers }),
         axios.get('/api/detections', { headers }),
-        axios.get('/api/auth/profile', { headers }).catch(() => ({ data: { is_paid: false } }))
+        axios.get('/api/auth/profile', { headers }).catch(() => ({ data: { is_paid: false, name: '' } }))
       ]);
       setCameras(camRes.data);
       setDetections(detRes.data);
-      setIsPaid(userRes.data.is_paid);
+      setUser(userRes.data);
     } catch(e) { console.error(e); }
   };
 
@@ -49,117 +50,106 @@ const Dashboard = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold">Security Dashboard</h1>
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
-        >
-          <Plus size={20} /> Add Camera
-        </button>
+      <div className="flex justify-between items-center mb-10">
+        <div>
+          <h1 className="text-4xl font-black tracking-tighter">Security Operations</h1>
+          <p className="text-metallic-gray-600 font-bold uppercase text-[10px] tracking-widest mt-1">Status: {user.is_paid ? "Active Pro Monitoring" : "Analysis Disabled"}</p>
+        </div>
+        <div className="flex gap-4">
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="btn-metallic flex items-center gap-2"
+          >
+            <Plus size={18} /> <span className="uppercase text-[10px] tracking-widest font-black">Add CCTV Unit</span>
+          </button>
+          <Link to="/profile" className="btn-metallic flex items-center gap-2">
+            <Settings size={18} />
+          </Link>
+        </div>
       </div>
 
-      {!isPaid && cameras.length > 0 && (
-        <div className="bg-amber-50 border-l-4 border-amber-400 p-4 mb-8 flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            <Lock className="text-amber-600" />
-            <p className="text-amber-700">AI analysis is currently disabled. <span className="font-bold">Upgrade your plan</span> to start receiving alerts and face recognition.</p>
+      <div className="grid lg:grid-cols-4 gap-10">
+        <div className="lg:col-span-3 space-y-10">
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-xl font-black uppercase tracking-widest flex items-center gap-2"><LayoutGrid size={24} /> Video Matrix</h2>
+            <div className="flex gap-2">
+              <span className="bg-white px-3 py-1 rounded-full text-[10px] font-black uppercase text-dark-black border border-metallic-gray-200">Total Cameras: {cameras.length}</span>
+            </div>
           </div>
-          <Link to="/pricing" className="bg-amber-600 text-white px-4 py-1 rounded text-sm font-semibold hover:bg-amber-700 transition">Upgrade Now</Link>
-        </div>
-      )}
 
-      <div className="grid lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 space-y-6">
-          <h2 className="text-xl font-semibold flex items-center gap-2"><Camera /> Active Feeds</h2>
-          <div className="grid md:grid-cols-2 gap-4">
-            {cameras.length === 0 && (
-              <div className="col-span-full border-2 border-dashed border-gray-300 rounded-lg p-12 text-center text-gray-500">
-                No cameras registered. Click "Add Camera" to link your IP camera.
-              </div>
-            )}
-            {cameras.map(cam => (
-              <div key={cam.id} className="bg-black aspect-video rounded-lg relative overflow-hidden flex items-center justify-center text-white/50 border border-gray-800">
-                {!isPaid ? (
-                  <div className="text-center p-4">
-                    <Lock className="mx-auto mb-2 opacity-30" size={32} />
-                    <p className="font-medium text-white">{cam.name}</p>
-                    <p className="text-xs text-gray-500 italic mt-1">Analysis Locked</p>
-                  </div>
-                ) : (
-                  <div className="text-center p-4">
-                    <p className="font-medium text-white">{cam.name}</p>
-                    <p className="text-xs truncate max-w-[200px]">{cam.stream_url}</p>
-                  </div>
-                )}
-
-                {isPaid && (
-                  <div className="absolute top-2 left-2 bg-red-600 text-white text-xs px-2 py-1 rounded flex items-center gap-1">
-                    <div className="w-2 h-2 bg-white rounded-full animate-pulse" /> LIVE
-                  </div>
-                )}
-              </div>
-            ))}
+          <div className="glass-card p-4 bg-metallic-gray-200/50">
+             <CameraGrid cameras={cameras} isPaid={user.is_paid} />
           </div>
         </div>
 
-        <div className="space-y-6">
-          <h2 className="text-xl font-semibold flex items-center gap-2"><ShieldAlert /> Recent Alerts</h2>
-          <div className="bg-white rounded-lg shadow border border-gray-200 divide-y max-h-[600px] overflow-y-auto">
-            {!isPaid && cameras.length > 0 && (
-              <div className="p-8 text-center text-gray-400">
-                <Lock className="mx-auto mb-2" size={24} />
-                <p className="text-sm">Alerts are available on Pro plans.</p>
+        <div className="space-y-10">
+          <h2 className="text-xl font-black uppercase tracking-widest flex items-center gap-2"><ShieldAlert size={24} /> Intelligence</h2>
+          <div className="glass-card h-[700px] flex flex-col overflow-hidden bg-white/40">
+            <div className="p-4 border-b border-metallic-gray-100 bg-metallic-gray-50 flex items-center justify-between">
+              <span className="text-[10px] font-black uppercase tracking-widest text-dark-black">Real-time Detections</span>
+              <div className="flex gap-1">
+                 <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
               </div>
-            )}
-            {isPaid && detections.length === 0 && <p className="p-4 text-gray-500 text-center">No alerts detected yet.</p>}
-            {isPaid && detections.map(det => (
-              <div key={det.id} className="p-4 hover:bg-gray-50 transition">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <p className="font-medium text-blue-600 capitalize">{det.type}</p>
-                    <p className="text-sm text-gray-800 font-semibold">{det.label}</p>
-                  </div>
-                  <span className="text-xs text-gray-400">{new Date(det.timestamp).toLocaleTimeString()}</span>
+            </div>
+
+            <div className="flex-grow overflow-y-auto divide-y divide-metallic-gray-100">
+              {!user.is_paid && cameras.length > 0 && (
+                <div className="p-10 text-center text-metallic-gray-400">
+                  <Lock className="mx-auto mb-4 opacity-30" size={48} />
+                  <p className="text-xs font-black uppercase tracking-widest leading-relaxed">Intelligence analysis is locked for basic accounts.</p>
+                  <Link to="/pricing" className="text-[10px] text-dark-black underline font-black block mt-6 uppercase tracking-widest">Upgrade Access</Link>
                 </div>
-              </div>
-            ))}
+              )}
+              {user.is_paid && detections.length === 0 && (
+                <div className="p-10 text-center text-metallic-gray-400 italic text-sm">Waiting for incoming security metadata...</div>
+              )}
+              {user.is_paid && detections.map(det => (
+                <div key={det.id} className="p-4 hover:bg-white/80 transition cursor-pointer">
+                  <div className="flex justify-between items-start mb-1">
+                    <span className="text-[10px] font-black uppercase tracking-widest px-2 py-0.5 bg-dark-black text-white rounded">{det.type}</span>
+                    <span className="text-[9px] font-bold text-metallic-gray-400 tabular-nums">{new Date(det.timestamp).toLocaleTimeString()}</span>
+                  </div>
+                  <p className="text-sm font-black text-dark-black">{det.label}</p>
+                  <p className="text-[9px] font-bold text-metallic-gray-400 uppercase tracking-tighter mt-1 flex items-center gap-1"><MonitorPlay size={10} /> Cam {det.camera_id}</p>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>
 
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-bold">Register IP Camera</h3>
-              <button onClick={() => setIsModalOpen(false)}><X /></button>
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50 backdrop-blur-md">
+          <div className="glass-card p-10 w-full max-w-md bg-white border-2 border-dark-black">
+            <div className="flex justify-between items-center mb-8">
+              <h3 className="text-2xl font-black tracking-tight">Add CCTV Unit</h3>
+              <button onClick={() => setIsModalOpen(false)} className="hover:rotate-90 transition p-1"><X /></button>
             </div>
-            <form onSubmit={handleAddCamera} className="space-y-4">
+            <form onSubmit={handleAddCamera} className="space-y-6">
               <div>
-                <label className="block text-sm font-medium mb-1">Camera Name</label>
+                <label className="text-[10px] font-black uppercase tracking-widest text-metallic-gray-500 block mb-2">Location Identity</label>
                 <input
                   required
                   type="text"
                   value={newCamera.name}
                   onChange={e => setNewCamera({...newCamera, name: e.target.value})}
-                  className="w-full border p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none"
-                  placeholder="Front Door"
+                  className="w-full bg-metallic-gray-50 border-2 border-metallic-gray-100 p-4 rounded-xl focus:border-dark-black outline-none transition font-bold"
+                  placeholder="Front Access"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">IP Camera URL (RTSP/HLS)</label>
+                <label className="text-[10px] font-black uppercase tracking-widest text-metallic-gray-500 block mb-2">IP Stream URL</label>
                 <input
                   required
                   type="text"
                   value={newCamera.stream_url}
                   onChange={e => setNewCamera({...newCamera, stream_url: e.target.value})}
-                  className="w-full border p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none"
-                  placeholder="rtsp://admin:pass@192.168.1.100:554/ch1"
+                  className="w-full bg-metallic-gray-50 border-2 border-metallic-gray-100 p-4 rounded-xl focus:border-dark-black outline-none transition font-bold"
+                  placeholder="rtsp://admin:pass@IP:554"
                 />
               </div>
-              <button className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition font-semibold">
-                Register Camera
+              <button className="btn-primary w-full py-4 uppercase tracking-widest text-xs font-black mt-4 shadow-[0_10px_30px_rgba(0,0,0,0.15)]">
+                Initialize Connection
               </button>
             </form>
           </div>

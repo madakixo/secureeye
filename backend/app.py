@@ -45,9 +45,21 @@ def login():
         return jsonify(access_token=access_token, user={"email": user.email, "name": user.name, "is_paid": user.is_paid}), 200
     return jsonify({"msg": "Bad email or password"}), 401
 
+@app.route('/api/user/profile', methods=['PUT'])
+@jwt_required()
+def update_profile():
+    user_id = get_jwt_identity()
+    user = User.query.get(user_id)
+    data = request.json
+    user.whatsapp = data.get('whatsapp', user.whatsapp)
+    user.location = data.get('location', user.location)
+    user.profile_pic = data.get('profile_pic', user.profile_pic)
+    db.session.commit()
+    return jsonify({"msg": "Profile updated"}), 200
+
 @app.route('/api/auth/profile', methods=['GET'])
 @jwt_required()
-def get_profile():
+def profile():
     user_id = get_jwt_identity()
     user = User.query.get(user_id)
     return jsonify({"email": user.email, "name": user.name, "is_paid": user.is_paid}), 200
