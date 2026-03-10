@@ -45,13 +45,19 @@ def login():
         return jsonify(access_token=access_token, user={"email": user.email, "name": user.name, "is_paid": user.is_paid}), 200
     return jsonify({"msg": "Bad email or password"}), 401
 
+@app.route('/api/auth/profile', methods=['GET'])
+@jwt_required()
+def get_profile():
+    user_id = get_jwt_identity()
+    user = User.query.get(user_id)
+    return jsonify({"email": user.email, "name": user.name, "is_paid": user.is_paid}), 200
+
 @app.route('/api/cameras', methods=['GET', 'POST'])
 @jwt_required()
 def manage_cameras():
     user_id = get_jwt_identity()
     user = User.query.get(user_id)
-    if not user.is_paid:
-        return jsonify({"msg": "Subscription required"}), 403
+
     if request.method == 'POST':
         global stream_manager
         if stream_manager is None:
@@ -60,8 +66,12 @@ def manage_cameras():
         camera = Camera(user_id=user_id, name=data['name'], stream_url=data['stream_url'])
         db.session.add(camera)
         db.session.commit()
-        stream_manager.start_stream(camera.id)
-        return jsonify({"msg": "Camera added", "id": camera.id}), 201
+
+        # Only start the AI stream if the user has paid
+        if user.is_paid:
+            stream_manager.start_stream(camera.id)
+
+        return jsonify({"msg": "Camera added", "id": camera.id, "stream_started": user.is_paid}), 201
     cameras = Camera.query.filter_by(user_id=user_id).all()
     return jsonify([{"id": c.id, "name": c.name, "stream_url": c.stream_url} for c in cameras])
 
