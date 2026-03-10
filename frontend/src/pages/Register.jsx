@@ -10,7 +10,7 @@ const Register = () => {
     e.preventDefault();
     try {
       await axios.post('/api/auth/register', { email, password, name });
-      navigate('/login');
+      navigate('/onboarding');
     } catch (err) { alert("Registration failed"); }
   };
   return (

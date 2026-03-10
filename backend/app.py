@@ -8,6 +8,7 @@ from flask_jwt_extended import JWTManager, create_access_token, jwt_required, ge
 from models import db, User, Camera, ReferencePhoto, Payment, Detection
 from dotenv import load_dotenv
 from ai_engine.processor import get_face_encoding
+from ai_engine.stream_manager import StreamManager
 
 load_dotenv()
 
@@ -19,6 +20,7 @@ app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'super-secret-key')
 CORS(app)
 db.init_app(app)
 jwt = JWTManager(app)
+stream_manager = None
 
 with app.app_context():
     db.create_all()
@@ -43,19 +45,45 @@ def login():
         return jsonify(access_token=access_token, user={"email": user.email, "name": user.name, "is_paid": user.is_paid}), 200
     return jsonify({"msg": "Bad email or password"}), 401
 
+@app.route('/api/user/profile', methods=['PUT'])
+@jwt_required()
+def update_profile():
+    user_id = get_jwt_identity()
+    user = User.query.get(user_id)
+    data = request.json
+    user.whatsapp = data.get('whatsapp', user.whatsapp)
+    user.location = data.get('location', user.location)
+    user.profile_pic = data.get('profile_pic', user.profile_pic)
+    db.session.commit()
+    return jsonify({"msg": "Profile updated"}), 200
+
+@app.route('/api/auth/profile', methods=['GET'])
+@jwt_required()
+def profile():
+    user_id = get_jwt_identity()
+    user = User.query.get(user_id)
+    return jsonify({"email": user.email, "name": user.name, "is_paid": user.is_paid}), 200
+
 @app.route('/api/cameras', methods=['GET', 'POST'])
 @jwt_required()
 def manage_cameras():
     user_id = get_jwt_identity()
     user = User.query.get(user_id)
-    if not user.is_paid:
-        return jsonify({"msg": "Subscription required"}), 403
+
     if request.method == 'POST':
+        global stream_manager
+        if stream_manager is None:
+            stream_manager = StreamManager(app)
         data = request.json
         camera = Camera(user_id=user_id, name=data['name'], stream_url=data['stream_url'])
         db.session.add(camera)
         db.session.commit()
-        return jsonify({"msg": "Camera added"}), 201
+
+        # Only start the AI stream if the user has paid
+        if user.is_paid:
+            stream_manager.start_stream(camera.id)
+
+        return jsonify({"msg": "Camera added", "id": camera.id, "stream_started": user.is_paid}), 201
     cameras = Camera.query.filter_by(user_id=user_id).all()
     return jsonify([{"id": c.id, "name": c.name, "stream_url": c.stream_url} for c in cameras])
 
