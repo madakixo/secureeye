@@ -3,12 +3,10 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import Pricing from './pages/Pricing';
-import Onboarding from './pages/Onboarding';
 import Navbar from './components/Navbar';
 
 function App() {
   const isAuthenticated = !!localStorage.getItem('token');
-
   return (
     <Router>
       <div className="min-h-screen bg-gray-50">
@@ -17,16 +15,11 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/pricing" element={<Pricing />} />
-          <Route path="/onboarding" element={isAuthenticated ? <Onboarding /> : <Navigate to="/login" />} />
-          <Route
-            path="/dashboard"
-            element={isAuthenticated ? <Dashboard /> : <Navigate to="/login" />}
-          />
+          <Route path="/dashboard" element={isAuthenticated ? <Dashboard /> : <Navigate to="/login" />} />
           <Route path="/" element={<Navigate to="/pricing" />} />
         </Routes>
       </div>
     </Router>
   );
 }
-
 export default App;
